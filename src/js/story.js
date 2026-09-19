@@ -64,7 +64,7 @@ async function downloadStoryPhotos(type = 'stories') {
         json = await getHighlightStory(appState.current.highlights);
     } else {
         const userId =
-            (await getUserId(appState.current.username)) || (await getUserIdFromSearch(appState.current.username));
+            (await getUserIdFromSearch(appState.current.username)) || (await getUserId(appState.current.username));
         if (!userId) return null;
         json = await getStoryPhotos(userId);
     }
