@@ -177,11 +177,11 @@ async function saveAllSelected() {
 async function saveZip() {
     const ACTIVE_BUTTON = document.querySelector('.zip-download-button');
     setGroupDownloadProgress(ACTIVE_BUTTON, 0);
-    const date = new Date(appState.data.date * 1000).toISOString().split('T')[0];
     const media = Array.from(appState.selected).map((index) => {
         const item = appState.data.media[index];
+        const itemDate = new Date(item.takenAt * 1000).toISOString().split('T')[0];
         return {
-            title: `${appState.data.user.username}_${item.id}_${date}`,
+            title: `${appState.data.user.username}_${item.id}_${itemDate}`,
             format: item.format,
             item,
         };
@@ -347,12 +347,12 @@ function renderMedia(data) {
         return;
     }
     const fragment = document.createDocumentFragment();
-    const date = new Date(data.date * 1000).toISOString().split('T')[0];
     data.media.forEach((item, index) => {
+        const itemDate = new Date(item.takenAt * 1000).toISOString().split('T')[0];
         const attributes = {
             class: 'media-item',
             src: item.url,
-            title: `${data.user.username} | ${item.id} | ${date}`,
+            title: `${data.user.username} | ${item.id} | ${itemDate}`,
             controls: '',
             // Chrome's native download button bypasses saveMedia and fetches the
             // signed CDN url directly, which the CDN rejects.

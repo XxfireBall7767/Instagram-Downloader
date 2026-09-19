@@ -75,5 +75,6 @@ function extractMediaData(item) {
         id: item.pk,
         format: resolveMediaFormat(progressive.url) ?? (isVideo ? 'mp4' : 'jpg'),
         dash,
+        takenAt: item['taken_at'],
     };
 }
