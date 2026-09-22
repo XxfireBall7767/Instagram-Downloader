@@ -68,9 +68,14 @@ async function downloadStoryPhotos(type = 'stories') {
         if (!userId) return null;
         json = await getStoryPhotos(userId);
     }
-    if (!json) return null;
+    if (!json?.items?.length) return null;
     const data = {
+        type: type === 'highlights' ? DOWNLOAD_FILENAME_SCOPES.HIGHLIGHTS : DOWNLOAD_FILENAME_SCOPES.STORIES,
+        id: String(
+            type === 'highlights' ? appState.current.highlights : (json.id ?? json.user?.pk ?? json.user?.pk_id ?? ''),
+        ),
         date: json.items[0]['taken_at'],
+        title: type === 'highlights' ? json.title || json.reel_title || '' : '',
         user: {
             username: json.user['username'],
         },

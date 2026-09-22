@@ -63,6 +63,16 @@ function selectLargestProgressive(items) {
     }, items[0]);
 }
 
+function getOriginalMediaFilename(mediaUrl) {
+    try {
+        const pathname = new URL(mediaUrl).pathname;
+        const filename = decodeURIComponent(pathname.split('/').pop() || '');
+        return filename.replace(/\.[a-z0-9]+$/i, '');
+    } catch (error) {
+        return '';
+    }
+}
+
 function extractMediaData(item) {
     const isVideo = item['media_type'] !== 1;
     const mediaItems = isVideo ? item['video_versions'] : item['image_versions2'].candidates;
@@ -73,6 +83,11 @@ function extractMediaData(item) {
         url: progressive.url,
         isVideo,
         id: item.pk,
+        originalFilename: getOriginalMediaFilename(progressive.url),
+        width: dash?.width || Number(progressive.width || 0),
+        height: dash?.height || Number(progressive.height || 0),
+        videoBitrate: dash?.bandwidth || 0,
+        videoCodec: dash?.videoCodec || '',
         format: resolveMediaFormat(progressive.url) ?? (isVideo ? 'mp4' : 'jpg'),
         dash,
         takenAt: item['taken_at'],

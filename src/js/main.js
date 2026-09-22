@@ -337,6 +337,7 @@ const appState = Object.freeze(
                 media.src = media.src;
             });
         });
+        window.addEventListener('downloadUiModeChange', updateButtonVisibility);
         navigation.addEventListener('navigate', (e) => {
             if (e.destination.url?.startsWith('blob')) {
                 return;
