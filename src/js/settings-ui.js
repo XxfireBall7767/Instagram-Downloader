@@ -1,6 +1,21 @@
 (() => {
     const NAV_ITEM_CLASS = 'igd-settings-nav-item';
     const MODAL_CLASS = 'igd-settings-modal';
+    const RESERVED_SIDEBAR_PATHS = new Set([
+        '/',
+        '/search/',
+        '/explore/',
+        '/explore/tags/',
+        '/reels/',
+        '/reels/tv/',
+        '/direct/',
+        '/direct/inbox/',
+        '/accounts/',
+        '/about/',
+        '/developer/',
+        '/legal/',
+        '/challenge/',
+    ]);
     const FILENAME_SCOPE_LABELS = Object.freeze({
         [DOWNLOAD_FILENAME_SCOPES.POST]: 'Posts',
         [DOWNLOAD_FILENAME_SCOPES.STORIES]: 'Stories',
@@ -298,18 +313,17 @@
         modal.querySelector('.igd-settings-close').focus();
     }
 
+    function isSidebarProfileCandidate(link) {
+        const rect = link.getBoundingClientRect();
+        if (rect.left >= 100 || rect.width < 40 || rect.height < 48) return false;
+        if (link.origin !== window.location.origin) return false;
+        const path = new URL(link.href).pathname;
+        return !RESERVED_SIDEBAR_PATHS.has(path) && /^\/[A-Za-z0-9._]+\/?$/.test(path);
+    }
+
     function findSidebarProfileLink() {
-        return [...document.querySelectorAll('a[href]')].find((link) => {
-            const rect = link.getBoundingClientRect();
-            const path = new URL(link.href).pathname;
-            return (
-                rect.left < 100 &&
-                rect.width >= 40 &&
-                rect.height >= 48 &&
-                /^\/[A-Za-z0-9._]+\/?$/.test(path) &&
-                Boolean(link.querySelector('img[alt*="profile picture"]'))
-            );
-        });
+        const candidates = [...document.querySelectorAll('a[href]')].filter(isSidebarProfileCandidate);
+        return candidates.find((link) => link.querySelector('img')) ?? candidates[0] ?? null;
     }
 
     function findNavigationContainer(profileLink) {
