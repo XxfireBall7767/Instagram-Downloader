@@ -594,3 +594,18 @@ function resolveMediaFormat(mediaUrl) {
         return null;
     }
 }
+
+function getFbDtsg() {
+    for (const script of document.scripts) {
+        const text = script.textContent || '';
+
+        const match =
+            text.match(/"DTSGInitialData",\[\],\{"token":"([^"]+)"/) || text.match(/"dtsg":\s*\{\s*"token":"([^"]+)"/);
+
+        if (match) {
+            return match[1];
+        }
+    }
+
+    return null;
+}

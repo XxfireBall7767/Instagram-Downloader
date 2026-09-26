@@ -30,13 +30,30 @@ async function getUserId(username) {
 }
 
 async function getStoryPhotos(userId) {
-    const apiURL = new URL('/api/v1/feed/reels_media/', IG_BASE_URL);
-    apiURL.searchParams.set('reel_ids', userId);
     try {
         setPreferredMediaResolutionCookies();
-        const respone = await fetch(apiURL.href, getFetchOptions());
+        const apiURL = new URL('/graphql/query', IG_BASE_URL);
+        const fetchOptions = getFetchOptions();
+        fetchOptions['method'] = 'POST';
+        fetchOptions.headers['content-type'] = 'application/x-www-form-urlencoded';
+        fetchOptions.headers['x-fb-friendly-name'] = 'PolarisStoriesV3ReelPageGalleryQuery';
+        fetchOptions.body = new URLSearchParams({
+            fb_dtsg: getFbDtsg(),
+            fb_api_caller_class: 'RelayModern',
+            fb_api_req_friendly_name: 'PolarisStoriesV3ReelPageGalleryQuery',
+            doc_id: '28262315486766731',
+            variables: JSON.stringify({
+                initial_reel_id: userId,
+                reel_ids: [userId],
+                first: 3,
+                last: 2,
+                __relay_internal__pv__PolarisCommunityNoteStoriesLabelEnabledrelayprovider: true,
+            }),
+            server_timestamps: true,
+        }).toString();
+        const respone = await fetch(apiURL.href, fetchOptions);
         const json = await respone.json();
-        return json.reels[userId];
+        return json.data['xdt_api__v1__feed__reels_media__connection'].edges[0].node;
     } catch (error) {
         console.log(error);
         return null;
@@ -44,13 +61,30 @@ async function getStoryPhotos(userId) {
 }
 
 async function getHighlightStory(highlightsId) {
-    const apiURL = new URL('/api/v1/feed/reels_media/', IG_BASE_URL);
-    apiURL.searchParams.set('reel_ids', `highlight:${highlightsId}`);
     try {
         setPreferredMediaResolutionCookies();
-        const respone = await fetch(apiURL.href, getFetchOptions());
+        const apiURL = new URL('/graphql/query', IG_BASE_URL);
+        const fetchOptions = getFetchOptions();
+        fetchOptions['method'] = 'POST';
+        fetchOptions.headers['content-type'] = 'application/x-www-form-urlencoded';
+        fetchOptions.headers['x-fb-friendly-name'] = 'PolarisStoriesV3HighlightsPageQuery';
+        fetchOptions.body = new URLSearchParams({
+            fb_dtsg: getFbDtsg(),
+            fb_api_caller_class: 'RelayModern',
+            fb_api_req_friendly_name: 'PolarisStoriesV3HighlightsPageQuery',
+            doc_id: '28325328583775973',
+            variables: JSON.stringify({
+                initial_reel_id: `highlight:${highlightsId}`,
+                reel_ids: [`highlight:${highlightsId}`],
+                first: 3,
+                last: 2,
+                __relay_internal__pv__PolarisCommunityNoteStoriesLabelEnabledrelayprovider: true,
+            }),
+            server_timestamps: true,
+        }).toString();
+        const respone = await fetch(apiURL.href, fetchOptions);
         const json = await respone.json();
-        return json.reels[`highlight:${highlightsId}`];
+        return json.data['xdt_api__v1__feed__reels_media__connection'].edges[0].node;
     } catch (error) {
         console.log(error);
         return null;
