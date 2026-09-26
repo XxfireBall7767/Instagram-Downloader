@@ -134,6 +134,173 @@ async function fetchBestMediaBlob(item, onProgress) {
     return fetchProgressiveMediaBlob(item.url, onProgress);
 }
 
+const inlineDownloadProgressState = new Map();
+
+function getInlineDownloadButtons(button, operationKey) {
+    const buttons = button ? [button] : [];
+    if (!operationKey) return buttons;
+
+    for (const candidate of document.querySelectorAll('[data-download-operation-key]')) {
+        if (candidate.dataset.downloadOperationKey === operationKey && !buttons.includes(candidate)) {
+            buttons.push(candidate);
+        }
+    }
+    return buttons;
+}
+
+function applyInlineDownloadProgress(button, percent) {
+    const value = Math.max(0, Math.min(100, Number(percent) || 0));
+    button.classList.add('igd-inline-downloading');
+    button.disabled = true;
+    button.style.setProperty('--inline-download-progress', `${value}%`);
+    button.setAttribute('aria-busy', 'true');
+    button.setAttribute('aria-valuenow', Math.round(value));
+}
+
+function clearInlineDownloadProgress(button) {
+    button.classList.remove('igd-inline-downloading');
+    button.disabled = false;
+    button.style.removeProperty('--inline-download-progress');
+    button.removeAttribute('aria-busy');
+    button.removeAttribute('aria-valuenow');
+}
+
+function setInlineDownloadProgress(button, percent, operationKey = button?.dataset.downloadOperationKey || '') {
+    const value = Math.max(0, Math.min(100, Number(percent) || 0));
+    if (operationKey) inlineDownloadProgressState.set(operationKey, value);
+    for (const candidate of getInlineDownloadButtons(button, operationKey)) {
+        applyInlineDownloadProgress(candidate, value);
+    }
+}
+
+function restoreInlineDownloadProgress(button) {
+    const operationKey = button?.dataset.downloadOperationKey || '';
+    if (!operationKey || !inlineDownloadProgressState.has(operationKey)) return;
+    applyInlineDownloadProgress(button, inlineDownloadProgressState.get(operationKey));
+}
+
+function resetInlineDownloadProgress(button, operationKey = button?.dataset.downloadOperationKey || '') {
+    const buttons = getInlineDownloadButtons(button, operationKey);
+    if (operationKey) inlineDownloadProgressState.delete(operationKey);
+    for (const candidate of buttons) clearInlineDownloadProgress(candidate);
+}
+
+async function getInlineDownloadData(type, shortcode) {
+    if (type === 'post') {
+        if (shortcode) return downloadPostPhotos(shortcode);
+        appState.setCurrentShortcode();
+        return downloadPostPhotos();
+    }
+    if (type === 'highlights') {
+        appState.setCurrentHightlightsId();
+        return downloadStoryPhotos('highlights');
+    }
+    appState.setCurrentUsername();
+    return downloadStoryPhotos('stories');
+}
+
+function getDownloadFilenameScope(data) {
+    if (Object.values(DOWNLOAD_FILENAME_SCOPES).includes(data?.type)) return data.type;
+    if (Object.values(DOWNLOAD_FILENAME_SCOPES).includes(appState.currentDisplay)) return appState.currentDisplay;
+    return DOWNLOAD_FILENAME_SCOPES.POST;
+}
+
+function getDownloadFilenameValues(data, item, useContainerId = false) {
+    const timestamp = item?.takenAt ?? data?.date;
+    const width = Number(item?.width || 0);
+    const height = Number(item?.height || 0);
+    const bitrate = Number(item?.videoBitrate || 0);
+    const codec = String(item?.videoCodec || '').toLowerCase();
+    let friendlyCodec = '';
+    if (codec.startsWith('vp09') || codec.startsWith('vp9')) friendlyCodec = 'VP9';
+    else if (codec.startsWith('av01') || codec.startsWith('av1')) friendlyCodec = 'AV1';
+    else if (codec.startsWith('avc1') || codec.startsWith('avc3') || codec.startsWith('h264')) friendlyCodec = 'H264';
+    else if (codec.startsWith('hev1') || codec.startsWith('hvc1') || codec.startsWith('hevc')) friendlyCodec = 'HEVC';
+    else if (codec) friendlyCodec = codec.split('.')[0].toUpperCase();
+
+    return {
+        original_filename: item?.originalFilename || data?.media?.[0]?.originalFilename || '',
+        username: data?.user?.username || '',
+        date: downloadFilenamePreferences.formatDate(timestamp),
+        title: data?.title || '',
+        id: String((useContainerId ? data?.id : item?.id) || data?.id || ''),
+        resolution: width && height ? `${width}x${height}` : '',
+        video_bitrate:
+            bitrate >= 1000000
+                ? `${Number((bitrate / 1000000).toFixed(1))}Mbps`
+                : bitrate
+                  ? `${Math.round(bitrate / 1000)}kbps`
+                  : '',
+        video_codec: friendlyCodec,
+    };
+}
+
+function getMediaFileName(data, item) {
+    const scope = getDownloadFilenameScope(data);
+    const values = getDownloadFilenameValues(data, item);
+    const baseName = downloadFilenamePreferences.formatMedia(scope, values);
+    return `${baseName}.${item.format}`;
+}
+
+function getArchiveFileName(data, item = data?.media?.[0]) {
+    const baseName = downloadFilenamePreferences.formatArchive(
+        getDownloadFilenameScope(data),
+        getDownloadFilenameValues(data, item, true),
+    );
+    return `${baseName}.zip`;
+}
+
+function getUniqueArchiveEntryName(fileName, usedNames) {
+    let candidate = fileName;
+    let suffix = 2;
+    const dotIndex = fileName.lastIndexOf('.');
+    const baseName = dotIndex > 0 ? fileName.slice(0, dotIndex) : fileName;
+    const extension = dotIndex > 0 ? fileName.slice(dotIndex) : '';
+    while (usedNames.has(candidate.toLowerCase())) candidate = `${baseName}_${suffix++}${extension}`;
+    usedNames.add(candidate.toLowerCase());
+    return candidate;
+}
+
+async function downloadInlineMedia({ button, type, downloadAll = false, index = 0, shortcode, operationKey = '' }) {
+    if (button.disabled) return;
+    setInlineDownloadProgress(button, 0, operationKey);
+    try {
+        const data = await getInlineDownloadData(type, shortcode);
+        if (!data?.media?.length) throw new Error('No downloadable media found');
+
+        if (!downloadAll) {
+            const item = data.media[Math.min(Math.max(index, 0), data.media.length - 1)];
+            const blob = await fetchBestMediaBlob(item, ({ percent }) =>
+                setInlineDownloadProgress(button, percent, operationKey),
+            );
+            setInlineDownloadProgress(button, 100, operationKey);
+            saveFile(blob, getMediaFileName(data, item));
+            return;
+        }
+
+        const files = [];
+        const usedNames = new Set();
+        let processed = 0;
+        for (const item of data.media) {
+            const blob = await fetchBestMediaBlob(item, ({ percent }) => {
+                setInlineDownloadProgress(button, ((processed + percent / 100) / data.media.length) * 95, operationKey);
+            });
+            files.push({ title: getUniqueArchiveEntryName(getMediaFileName(data, item), usedNames), data: blob });
+            processed++;
+            setInlineDownloadProgress(button, (processed / data.media.length) * 95, operationKey);
+        }
+
+        setInlineDownloadProgress(button, 96, operationKey);
+        const zip = await createZip(files);
+        setInlineDownloadProgress(button, 100, operationKey);
+        saveFile(zip, getArchiveFileName(data));
+    } catch (error) {
+        console.log(error);
+    } finally {
+        setTimeout(() => resetInlineDownloadProgress(button, operationKey), 300);
+    }
+}
+
 async function saveMedia(item, fileName) {
     const DOWNLOAD_BUTTON = document.querySelector('.download-button');
     try {
@@ -152,7 +319,6 @@ async function saveMedia(item, fileName) {
 async function saveAllSelected() {
     const { data } = appState;
     const ACTIVE_BUTTON = document.querySelector('.all-download-button');
-    const date = new Date(data.date * 1000).toISOString().split('T')[0];
     const total = appState.selected.size;
     let processed = 0;
     setGroupDownloadProgress(ACTIVE_BUTTON, 0);
@@ -162,8 +328,7 @@ async function saveAllSelected() {
             const blob = await fetchBestMediaBlob(item, ({ percent }) => {
                 setGroupDownloadProgress(ACTIVE_BUTTON, ((processed + percent / 100) / total) * 100);
             });
-            const title = `${data.user.username} | ${item.id} | ${date}`;
-            saveFile(blob, title.replaceAll(' | ', '_') + `.${item.format}`);
+            saveFile(blob, getMediaFileName(data, item));
         } catch (error) {
             console.log(error);
         } finally {
@@ -179,24 +344,23 @@ async function saveZip() {
     setGroupDownloadProgress(ACTIVE_BUTTON, 0);
     const media = Array.from(appState.selected).map((index) => {
         const item = appState.data.media[index];
-        const itemDate = new Date(item.takenAt * 1000).toISOString().split('T')[0];
         return {
-            title: `${appState.data.user.username}_${item.id}_${itemDate}`,
-            format: item.format,
+            fileName: getMediaFileName(appState.data, item),
             item,
         };
     });
-    const zipFileName = `${media[0].title}.zip`;
+    const zipFileName = getArchiveFileName(appState.data, media[0]?.item);
     async function fetchSelectedMedia() {
         let processed = 0;
         const results = [];
+        const usedNames = new Set();
         for (const mediaItem of media) {
             const blob = await fetchBestMediaBlob(mediaItem.item, ({ percent }) => {
                 const downloadPercent = ((processed + percent / 100) / media.length) * 95;
                 setGroupDownloadProgress(ACTIVE_BUTTON, downloadPercent);
             });
             results.push({
-                title: `${mediaItem.title}.${mediaItem.format}`,
+                title: getUniqueArchiveEntryName(mediaItem.fileName, usedNames),
                 data: blob,
             });
             processed++;
@@ -305,9 +469,10 @@ function updateButtonVisibility() {
     const GROUP_DOWNLOAD_MEDIA = document.querySelector('.group-download-media');
     const DOWNLOAD_BUTTON = document.querySelector('.download-button');
     const panelHidden = DISPLAY_CONTAINER.classList.contains('hide');
+    const panelDisabled = !downloadUiPreferences.shows('panel');
     const isZipSelecting = appState.isSelecting && appState.selected.size > 0 && !panelHidden;
-    GROUP_DOWNLOAD_MEDIA.classList.toggle('hide', appState.extensionHidden || !isZipSelecting);
-    DOWNLOAD_BUTTON.classList.toggle('hide', appState.extensionHidden || isZipSelecting);
+    GROUP_DOWNLOAD_MEDIA.classList.toggle('hide', appState.extensionHidden || panelDisabled || !isZipSelecting);
+    DOWNLOAD_BUTTON.classList.toggle('hide', appState.extensionHidden || panelDisabled || isZipSelecting);
 }
 
 function updateSelectedMedia() {
@@ -376,8 +541,7 @@ function renderMedia(data) {
                 appState.toggleSelected(index);
                 updateSelectedMedia();
             } else {
-                const filename = media.title.replaceAll(' | ', '_') + `.${item.format}`;
-                saveMedia(item, filename);
+                saveMedia(item, getMediaFileName(data, item));
             }
         });
         fragment.appendChild(itemDOM);

@@ -1,4 +1,7 @@
 // How Zip work here https://en.wikipedia.org/wiki/ZIP_(file_format)
+// General-purpose bit 11 marks file names as UTF-8 (0x0800, little-endian).
+const ZIP_UTF8_FILENAME_FLAG = [0x00, 0x08];
+
 function calculateCRC32(data) {
     const table = new Uint32Array(256);
     for (let i = 0; i < 256; i++) {
@@ -20,7 +23,7 @@ function createLocalFileHeader(fileName, fileSize, crc32) {
     const header = new Uint8Array(30 + fileNameBytes.length);
     header.set([0x50, 0x4b, 0x03, 0x04], 0);
     header.set([0x14, 0x00], 4);
-    header.set([0x00, 0x00], 6);
+    header.set(ZIP_UTF8_FILENAME_FLAG, 6);
     header.set([0x00, 0x00], 8);
     header.set([0x00, 0x00, 0x00, 0x00], 10);
     header.set(new Uint8Array(new Uint32Array([crc32]).buffer), 14);
@@ -38,7 +41,7 @@ function createCentralDirectoryHeader(fileName, fileSize, crc32, offset) {
     header.set([0x50, 0x4b, 0x01, 0x02], 0);
     header.set([0x14, 0x00], 4);
     header.set([0x14, 0x00], 6);
-    header.set([0x00, 0x00], 8);
+    header.set(ZIP_UTF8_FILENAME_FLAG, 8);
     header.set([0x00, 0x00], 10);
     header.set([0x00, 0x00, 0x00, 0x00], 12);
     header.set(new Uint8Array(new Uint32Array([crc32]).buffer), 16);

@@ -262,8 +262,654 @@
     opacity: 1;
 }
 
+.igd-story-inline-download,
+.igd-story-inline-download-all {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 32px;
+    width: 32px;
+    height: 32px;
+    margin: 0;
+    padding: 6px;
+    color: #fff;
+    background: transparent;
+    border: 0;
+    border-radius: 50%;
+    outline: none;
+    cursor: pointer;
+    box-sizing: border-box;
+    transition:
+        background-color 120ms ease,
+        opacity 120ms ease;
+}
+
+.igd-story-inline-download:hover,
+.igd-story-inline-download-all:hover {
+    background-color: rgb(255 255 255 / 12%);
+}
+
+.igd-story-inline-download:active,
+.igd-story-inline-download-all:active {
+    opacity: 0.65;
+}
+
+.igd-story-inline-download:focus-visible,
+.igd-story-inline-download-all:focus-visible {
+    outline: 2px solid #fff;
+    outline-offset: -2px;
+}
+
+.igd-story-inline-download > svg,
+.igd-story-inline-download-all > svg {
+    display: block;
+    flex: none;
+    width: 20px;
+    height: 20px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2.5;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    pointer-events: none;
+}
+
+.igd-story-inline-download > svg {
+    transform: translateY(1px);
+}
+
+.igd-post-inline-download,
+.igd-post-inline-download-all {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 40px;
+    width: 40px;
+    height: 40px;
+    margin: 0;
+    padding: 8px;
+    color: rgb(var(--ig-primary-text));
+    background: transparent;
+    border: 0;
+    border-radius: 50%;
+    outline: none;
+    cursor: pointer;
+    box-sizing: border-box;
+    transition:
+        background-color 120ms ease,
+        opacity 120ms ease;
+}
+
+.igd-post-inline-download:hover,
+.igd-post-inline-download-all:hover {
+    background-color: rgb(var(--ig-secondary-background));
+}
+
+.igd-post-inline-download:active,
+.igd-post-inline-download-all:active {
+    opacity: 0.65;
+}
+
+.igd-post-inline-download:focus-visible,
+.igd-post-inline-download-all:focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: -2px;
+}
+
+.igd-post-inline-download > svg,
+.igd-post-inline-download-all > svg {
+    display: block;
+    flex: none;
+    width: 24px;
+    height: 24px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2.25;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    pointer-events: none;
+}
+
+.igd-post-inline-download > svg {
+    transform: translateY(1px);
+}
+
+.igd-story-inline-download::before,
+.igd-story-inline-download-all::before,
+.igd-post-inline-download::before,
+.igd-post-inline-download-all::before {
+    content: '';
+    position: absolute;
+    inset: 1px;
+    border-radius: 50%;
+    opacity: 0;
+    pointer-events: none;
+    background: conic-gradient(from -90deg, currentColor var(--inline-download-progress, 0%), rgb(255 255 255 / 25%) 0);
+    -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 0);
+    mask: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 0);
+    transition: opacity 120ms ease;
+}
+
+.igd-post-inline-download::before,
+.igd-post-inline-download-all::before {
+    inset: 2px;
+    background: conic-gradient(
+        from -90deg,
+        currentColor var(--inline-download-progress, 0%),
+        rgba(var(--ig-primary-text), 0.25) 0
+    );
+}
+
+.igd-inline-downloading::before {
+    opacity: 1;
+}
+
+.igd-inline-downloading {
+    cursor: progress;
+}
+
+/* Extension settings entry in Instagram's left navigation */
+.igd-settings-nav-item {
+    display: flex;
+    align-items: center;
+    flex: 0 0 56px;
+    width: 100%;
+    height: 56px;
+    overflow: hidden;
+}
+
+.igd-settings-nav-button {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    width: 100%;
+    min-width: 48px;
+    height: 48px;
+    padding: 12px;
+    overflow: hidden;
+    color: rgb(var(--ig-primary-text));
+    background: transparent;
+    border: 0;
+    border-radius: 8px;
+    cursor: pointer;
+    font: inherit;
+    text-align: left;
+}
+
+.igd-settings-nav-button:hover {
+    background: rgba(var(--ig-secondary-background), 0.55);
+}
+
+.igd-settings-nav-button:focus-visible {
+    outline: 2px solid rgb(var(--ig-colors-button-primary-background));
+    outline-offset: -2px;
+}
+
+.igd-settings-nav-button svg {
+    flex: 0 0 24px;
+    width: 24px;
+    height: 24px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    transition: transform 140ms ease;
+}
+
+.igd-settings-nav-button:hover svg {
+    transform: scale(1.06);
+}
+
+.igd-settings-nav-button span {
+    flex: 0 0 auto;
+    white-space: nowrap;
+    font-family: var(--font-family-system);
+    font-size: 16px;
+    font-weight: 600;
+    line-height: 20px;
+}
+
+/* Settings modal; Instagram's color variables handle light and dark themes. */
+.igd-settings-modal[hidden] {
+    display: none;
+}
+
+.igd-settings-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 2147483646;
+    display: grid;
+    place-items: center;
+    padding: 20px;
+    background: rgb(0 0 0 / 58%);
+    backdrop-filter: blur(3px);
+    font-family: var(--font-family-system);
+}
+
+.igd-settings-dialog {
+    display: flex;
+    flex-direction: column;
+    width: min(680px, 100%);
+    max-height: min(820px, calc(100vh - 40px));
+    overflow: hidden;
+    color: rgb(var(--ig-primary-text));
+    background: rgb(var(--ig-primary-background));
+    border: 1px solid rgb(var(--ig-separator));
+    border-radius: 18px;
+    box-shadow: 0 18px 55px rgb(0 0 0 / 38%);
+}
+
+.igd-settings-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 22px 22px 18px;
+    border-bottom: 1px solid rgb(var(--ig-separator));
+}
+
+.igd-settings-header h2,
+.igd-settings-header p {
+    margin: 0;
+}
+
+.igd-settings-header h2 {
+    font-size: 20px;
+    font-weight: 700;
+    line-height: 25px;
+}
+
+.igd-settings-header p {
+    margin-top: 5px;
+    color: rgb(var(--ig-secondary-text));
+    font-size: 14px;
+    line-height: 18px;
+}
+
+.igd-settings-close {
+    display: grid;
+    place-items: center;
+    flex: 0 0 34px;
+    width: 34px;
+    height: 34px;
+    padding: 0 0 2px;
+    color: rgb(var(--ig-primary-text));
+    background: rgb(var(--ig-secondary-background));
+    border: 0;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 25px;
+    line-height: 1;
+}
+
+.igd-settings-close:hover {
+    filter: brightness(0.92);
+}
+
+.igd-settings-content {
+    overflow: auto;
+    padding: 20px 22px 24px;
+}
+
+.igd-settings-section + .igd-settings-section {
+    margin-top: 24px;
+    padding-top: 22px;
+    border-top: 1px solid rgb(var(--ig-separator));
+}
+
+.igd-settings-section h3,
+.igd-settings-help {
+    margin: 0;
+}
+
+.igd-settings-section h3 {
+    font-size: 16px;
+    font-weight: 700;
+    line-height: 21px;
+}
+
+.igd-settings-help {
+    margin-top: 6px;
+    color: rgb(var(--ig-secondary-text));
+    font-size: 13px;
+    line-height: 18px;
+}
+
+.igd-settings-options {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+    padding: 12px 0 0;
+}
+
+.igd-settings-option {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 13px;
+    padding: 14px;
+    color: rgb(var(--ig-primary-text));
+    background: rgb(var(--ig-primary-background));
+    border: 1px solid rgb(var(--ig-separator));
+    border-radius: 12px;
+    cursor: pointer;
+    transition:
+        background-color 120ms ease,
+        border-color 120ms ease;
+}
+
+.igd-settings-option:hover {
+    background: rgb(var(--ig-secondary-background));
+}
+
+.igd-settings-option:has(input:checked) {
+    background: rgba(var(--ig-colors-button-primary-background), 0.1);
+    border-color: rgb(var(--ig-colors-button-primary-background));
+}
+
+.igd-settings-option input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.igd-settings-radio {
+    position: relative;
+    flex: 0 0 20px;
+    width: 20px;
+    height: 20px;
+    border: 2px solid rgb(var(--ig-secondary-text));
+    border-radius: 50%;
+}
+
+.igd-settings-option input:checked + .igd-settings-radio {
+    border-color: rgb(var(--ig-colors-button-primary-background));
+}
+
+.igd-settings-option input:checked + .igd-settings-radio::after {
+    content: '';
+    position: absolute;
+    inset: 3px;
+    background: rgb(var(--ig-colors-button-primary-background));
+    border-radius: 50%;
+}
+
+.igd-settings-option input:focus-visible + .igd-settings-radio {
+    outline: 2px solid rgb(var(--ig-colors-button-primary-background));
+    outline-offset: 3px;
+}
+
+.igd-settings-option strong,
+.igd-settings-option small {
+    display: block;
+}
+
+.igd-settings-option strong {
+    font-size: 15px;
+    font-weight: 650;
+    line-height: 20px;
+}
+
+.igd-settings-option small {
+    margin-top: 2px;
+    color: rgb(var(--ig-secondary-text));
+    font-size: 13px;
+    line-height: 17px;
+}
+
+.igd-date-format-setting {
+    display: grid;
+    grid-template-columns: 105px minmax(0, 1fr);
+    align-items: center;
+    gap: 4px 12px;
+    margin-top: 14px;
+    padding: 12px;
+    background: rgb(var(--ig-secondary-background));
+    border: 1px solid rgb(var(--ig-separator));
+    border-radius: 12px;
+}
+
+.igd-date-format-setting > span {
+    font-size: 13px;
+    font-weight: 650;
+}
+
+.igd-date-format-setting small {
+    grid-column: 2;
+    color: rgb(var(--ig-secondary-text));
+    font-size: 11px;
+    line-height: 15px;
+}
+
+.igd-date-format-select {
+    min-width: 0;
+    width: 100%;
+    padding: 7px 30px 7px 9px;
+    color: rgb(var(--ig-primary-text));
+    background-color: rgb(var(--ig-primary-background));
+    border: 1px solid rgb(var(--ig-separator));
+    border-radius: 8px;
+    cursor: pointer;
+    font: inherit;
+    font-size: 12px;
+}
+
+.igd-date-format-select:focus-visible {
+    border-color: rgb(var(--ig-colors-button-primary-background));
+    outline: 2px solid rgba(var(--ig-colors-button-primary-background), 0.25);
+}
+
+.igd-template-palette {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 14px;
+}
+
+.igd-template-palette-token,
+.igd-template-token {
+    color: rgb(var(--ig-primary-text));
+    background: rgb(var(--ig-secondary-background));
+    border: 1px solid rgb(var(--ig-separator));
+    border-radius: 9px;
+    font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 18px;
+}
+
+.igd-template-palette-token {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 10px;
+    cursor: grab;
+}
+
+.igd-template-palette-token-single-only::after {
+    content: 'Single only';
+    padding: 1px 5px;
+    color: rgb(var(--ig-secondary-text));
+    background: rgb(var(--ig-primary-background));
+    border-radius: 999px;
+    font-family: var(--font-family-system);
+    font-size: 9px;
+    font-weight: 600;
+    line-height: 14px;
+}
+
+.igd-template-palette-token:hover {
+    border-color: rgb(var(--ig-colors-button-primary-background));
+}
+
+.igd-template-palette-token:active,
+.igd-template-token:active {
+    cursor: grabbing;
+}
+
+.igd-template-scope-note {
+    margin: 10px 0 0;
+    color: rgb(var(--ig-secondary-text));
+    font-size: 11px;
+    line-height: 16px;
+}
+
+.igd-template-scope-note strong {
+    color: rgb(var(--ig-primary-text));
+}
+
+.igd-template-groups {
+    display: grid;
+    gap: 16px;
+    margin-top: 18px;
+}
+
+.igd-template-label {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 7px;
+}
+
+.igd-template-label strong {
+    font-size: 14px;
+    line-height: 18px;
+}
+
+.igd-template-reset {
+    padding: 2px 0;
+    color: rgb(var(--ig-colors-button-primary-background));
+    background: transparent;
+    border: 0;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.igd-template-row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px 16px;
+    min-height: 52px;
+    padding: 8px;
+    background: rgb(var(--ig-primary-background));
+    border: 1px dashed rgb(var(--ig-separator));
+    border-radius: 12px;
+    cursor: default;
+    transition:
+        background-color 120ms ease,
+        border-color 120ms ease;
+}
+
+.igd-template-row-active,
+.igd-template-row:focus-visible {
+    border-color: rgb(var(--ig-colors-button-primary-background));
+    outline: none;
+}
+
+.igd-template-row-dragover {
+    background: rgba(var(--ig-colors-button-primary-background), 0.09);
+    border-style: solid;
+}
+
+.igd-template-token {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 7px 6px 9px;
+    cursor: grab;
+    user-select: none;
+}
+
+.igd-template-token:not(:first-child)::before {
+    content: '_';
+    position: absolute;
+    left: -12px;
+    color: rgb(var(--ig-secondary-text));
+    font-weight: 700;
+}
+
+.igd-template-token button {
+    display: grid;
+    place-items: center;
+    width: 16px;
+    height: 16px;
+    padding: 0 0 1px;
+    color: rgb(var(--ig-secondary-text));
+    background: transparent;
+    border: 0;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 16px;
+    line-height: 1;
+}
+
+.igd-template-token button:hover {
+    color: rgb(var(--ig-primary-text));
+    background: rgba(var(--ig-primary-text), 0.1);
+}
+
+.igd-template-previews {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 7px;
+    margin-top: 8px;
+}
+
+.igd-template-preview {
+    display: grid;
+    grid-template-columns: 68px minmax(0, 1fr);
+    align-items: start;
+    gap: 8px;
+    min-width: 0;
+    color: rgb(var(--ig-secondary-text));
+    font-size: 11px;
+}
+
+.igd-template-preview span {
+    flex: none;
+    font-weight: 600;
+}
+
+.igd-template-preview code {
+    min-width: 0;
+    overflow: visible;
+    color: rgb(var(--ig-primary-text));
+    font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+    line-height: 16px;
+    overflow-wrap: anywhere;
+    text-overflow: clip;
+    white-space: normal;
+}
+
 /* Support bottom navigation */
 @media (max-width: 767px) {
+    .igd-settings-options {
+        grid-template-columns: 1fr;
+    }
+
+    .igd-settings-content {
+        padding-right: 16px;
+        padding-left: 16px;
+    }
+
+    .igd-template-previews {
+        grid-template-columns: 1fr;
+    }
+
+    .igd-date-format-setting {
+        grid-template-columns: 1fr;
+    }
+
+    .igd-date-format-setting small {
+        grid-column: 1;
+    }
+
     .download-button {
         display: flex;
         align-items: center;

@@ -50,12 +50,15 @@ async function getPostPhotos(shortcode) {
     }
 }
 
-async function downloadPostPhotos() {
-    if (!appState.current.shortcode) return null;
-    const json = await getPostPhotos(appState.current.shortcode);
+async function downloadPostPhotos(shortcode = appState.current.shortcode) {
+    if (!shortcode) return null;
+    const json = await getPostPhotos(shortcode);
     if (!json) return null;
     const data = {
+        type: DOWNLOAD_FILENAME_SCOPES.POST,
+        id: String(json.pk ?? convertToPostId(shortcode)),
         date: json['taken_at'],
+        title: json.caption?.text?.split('\n')[0] || '',
         user: {
             username: json.user['username'],
         },
