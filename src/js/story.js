@@ -1,28 +1,34 @@
 async function getUserIdFromSearch(username) {
     if (appCache.userIdsCache.has(username)) return appCache.userIdsCache.get(username);
     const query = username || appState.current.username;
-    const apiURL = new URL('/web/search/topsearch/', IG_BASE_URL);
-    apiURL.searchParams.set('query', query);
     try {
-        const respone = await fetch(apiURL.href);
+        const apiURL = new URL('/graphql/query', IG_BASE_URL);
+        const fetchOptions = getFetchOptions();
+        fetchOptions['method'] = 'POST';
+        fetchOptions.headers['content-type'] = 'application/x-www-form-urlencoded';
+        fetchOptions.headers['x-fb-friendly-name'] = 'PolarisSearchBoxRefetchableQuery';
+        fetchOptions.body = new URLSearchParams({
+            fb_dtsg: getFbDtsg(),
+            fb_api_caller_class: 'RelayModern',
+            fb_api_req_friendly_name: 'PolarisSearchBoxRefetchableQuery',
+            doc_id: '27706427925724183',
+            variables: JSON.stringify({
+                data: {
+                    context: 'blended',
+                    include_reel: 'true',
+                    query: username,
+                    rank_token: '',
+                    search_surface: 'web_top_search',
+                },
+                hasQuery: true,
+            }),
+            server_timestamps: true,
+        }).toString();
+        const respone = await fetch(apiURL.href, fetchOptions);
         const json = await respone.json();
-        const exactMatch = json.users.find((item) => item.user['username'] === query);
-        return (exactMatch ?? json.users[0]).user['pk_id'];
-    } catch (error) {
-        console.log(error);
-        return '';
-    }
-}
-
-async function getUserId(username) {
-    if (appCache.userIdsCache.has(username)) return appCache.userIdsCache.get(username);
-    const apiURL = new URL('/api/v1/users/web_profile_info/', IG_BASE_URL);
-    if (username) apiURL.searchParams.set('username', username);
-    else apiURL.searchParams.set('username', appState.current.username);
-    try {
-        const respone = await fetch(apiURL.href, getFetchOptions());
-        const json = await respone.json();
-        return json.data.user['id'];
+        const users = json.data['xdt_api__v1__fbsearch__topsearch_connection'].users;
+        const exactMatch = users.find((item) => item.user['username'] === query);
+        return (exactMatch ?? users[0]).user['id'];
     } catch (error) {
         console.log(error);
         return '';
@@ -97,8 +103,7 @@ async function downloadStoryPhotos(type = 'stories') {
         if (!appState.current.highlights) return null;
         json = await getHighlightStory(appState.current.highlights);
     } else {
-        const userId =
-            (await getUserIdFromSearch(appState.current.username)) || (await getUserId(appState.current.username));
+        const userId = await getUserIdFromSearch(appState.current.username);
         if (!userId) return null;
         json = await getStoryPhotos(userId);
     }
