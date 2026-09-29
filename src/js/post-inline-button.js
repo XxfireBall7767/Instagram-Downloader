@@ -8,6 +8,19 @@
         return window.location.pathname === '/' || IG_POST_REGEX.test(window.location.pathname);
     }
 
+    // /reels/:code is a vertical feed: every reel shares the page URL, which
+    // tracks only the reel currently on screen, and its actions are a column.
+    function isReelsFeed() {
+        return /^\/reels\/[A-Za-z0-9_-]+/.test(window.location.pathname);
+    }
+
+    function isActiveReel(root) {
+        const video = root.querySelector?.('video');
+        if (!video) return false;
+        const rect = video.getBoundingClientRect();
+        return rect.top <= innerHeight / 2 && rect.bottom >= innerHeight / 2;
+    }
+
     function isVisible(element) {
         const rect = element.getBoundingClientRect();
         const style = getComputedStyle(element);
@@ -30,8 +43,11 @@
             if (!shareButton) continue;
             const root = getPostRoot(shareButton);
             if (handledRoots.has(root) || (root === document && !IG_POST_REGEX.test(location.pathname))) continue;
+            const reelsFeed = isReelsFeed();
+            if (reelsFeed && !isActiveReel(root)) continue;
+            const directions = reelsFeed ? ['column', 'column-reverse'] : ['row', 'row-reverse'];
 
-            // Stop at the innermost horizontal action group. The outer grid has
+            // Stop at the innermost action group (a column on /reels/). The outer grid has
             // a separate Save cell: inserting a new child there creates a new row.
             let container = shareButton.parentElement;
             while (container && container !== root && container !== document.body) {
@@ -42,7 +58,7 @@
                 );
                 if (
                     ['flex', 'inline-flex'].includes(style.display) &&
-                    ['row', 'row-reverse'].includes(style.flexDirection) &&
+                    directions.includes(style.flexDirection) &&
                     icons.length >= 3 &&
                     icons.length <= 6
                 ) {
@@ -63,7 +79,25 @@
     }
 
     function getPostRoot(shareButton) {
-        return shareButton.closest('article') ?? document;
+        const article = shareButton.closest('article');
+        if (article || !isReelsFeed()) return article ?? document;
+        // A reel's own container is the largest ancestor holding only its Share
+        // button. Its video can be missing while it loads lazily off screen.
+        let reel = shareButton;
+        while (
+            reel.parentElement &&
+            reel.parentElement !== document.body &&
+            countShareButtons(reel.parentElement) === 1
+        ) {
+            reel = reel.parentElement;
+        }
+        return reel;
+    }
+
+    function countShareButtons(element) {
+        return [...element.querySelectorAll('svg[aria-label]')].filter(
+            (icon) => isShareIcon(icon) && icon.closest('button, [role="button"]'),
+        ).length;
     }
 
     function extractShortcode(href) {
@@ -214,6 +248,7 @@
                 singleButton = createPostDownloadButton({ downloadAll: false, root, shortcode });
             }
             activeButtons.add(singleButton);
+            singleButton.classList.toggle('igd-post-inline-download-reel', isReelsFeed());
 
             let downloadAllButton = findOwnButton(actionsContainer, DOWNLOAD_ALL_BUTTON_CLASS);
             if (isCarouselPost(root)) {
@@ -270,5 +305,7 @@
     observePage();
     window.addEventListener('downloadUiModeChange', queueUpdate);
     navigation.addEventListener('navigate', queueUpdate);
+    // The reels feed scrolls inside a nested container; the active reel changes without a URL change until it settles.
+    document.addEventListener('scrollend', queueUpdate, true);
     queueUpdate();
 })();

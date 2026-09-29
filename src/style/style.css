@@ -380,6 +380,16 @@
     transform: translateY(1px);
 }
 
+/* Match the reels action column: 24px icon slots followed by 28px of space.
+   Negative margins keep the 40px hit area without changing that rhythm. */
+.igd-post-inline-download-reel {
+    margin: -8px -8px 20px;
+}
+
+.igd-post-inline-download-reel > svg {
+    transform: none;
+}
+
 .igd-story-inline-download::before,
 .igd-story-inline-download-all::before,
 .igd-post-inline-download::before,
