@@ -14,9 +14,7 @@ const videoDownloadPreferences = Object.freeze(
         function getSavedMode() {
             try {
                 const savedMode = localStorage.getItem(VIDEO_DOWNLOAD_MODE_STORAGE_KEY);
-                return Object.values(VIDEO_DOWNLOAD_MODES).includes(savedMode)
-                    ? savedMode
-                    : getDefaultMode();
+                return Object.values(VIDEO_DOWNLOAD_MODES).includes(savedMode) ? savedMode : getDefaultMode();
             } catch (error) {
                 return getDefaultMode();
             }
