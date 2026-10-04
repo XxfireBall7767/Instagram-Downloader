@@ -86,6 +86,8 @@ function extractMediaData(item) {
         originalFilename: getOriginalMediaFilename(progressive.url),
         width: dash?.width || Number(progressive.width || 0),
         height: dash?.height || Number(progressive.height || 0),
+        progressiveWidth: Number(progressive.width || 0),
+        progressiveHeight: Number(progressive.height || 0),
         videoBitrate: dash?.bandwidth || 0,
         videoCodec: dash?.videoCodec || '',
         format: resolveMediaFormat(progressive.url) ?? (isVideo ? 'mp4' : 'jpg'),

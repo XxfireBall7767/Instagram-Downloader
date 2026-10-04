@@ -603,6 +603,10 @@
     padding: 12px 0 0;
 }
 
+.igd-settings-options-quality {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
 .igd-settings-option {
     position: relative;
     display: flex;

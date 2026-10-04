@@ -230,6 +230,28 @@
                             </label>
                         </div>
                     </section>
+                    <section class="igd-settings-section">
+                        <h3>Video download quality</h3>
+                        <p class="igd-settings-help">Choose between Instagram's highest-quality stream and a more widely compatible video.</p>
+                        <div class="igd-settings-options igd-settings-options-quality" role="radiogroup" aria-label="Video download quality">
+                            <label class="igd-settings-option">
+                                <input type="radio" name="igd-video-download-mode" value="highest">
+                                <span class="igd-settings-radio"></span>
+                                <span>
+                                    <strong>Highest quality</strong>
+                                    <small>Default on Windows and Linux; downloads the best available DASH video</small>
+                                </span>
+                            </label>
+                            <label class="igd-settings-option">
+                                <input type="radio" name="igd-video-download-mode" value="h264">
+                                <span class="igd-settings-radio"></span>
+                                <span>
+                                    <strong>H.264 (Compatible)</strong>
+                                    <small>Default on macOS; downloads Instagram's progressive video for wider player support</small>
+                                </span>
+                            </label>
+                        </div>
+                    </section>
                     <section class="igd-settings-section igd-filename-settings">
                         <h3>File name templates</h3>
                         <p class="igd-settings-help">Drag variables into a row or click one to add it to the active row. Underscores are added automatically; unavailable values are skipped.</p>
@@ -290,6 +312,9 @@
         overlay.querySelectorAll('input[name="igd-download-ui-mode"]').forEach((input) => {
             input.addEventListener('change', () => downloadUiPreferences.setMode(input.value));
         });
+        overlay.querySelectorAll('input[name="igd-video-download-mode"]').forEach((input) => {
+            input.addEventListener('change', () => videoDownloadPreferences.setMode(input.value));
+        });
         bindFilenameBuilder(overlay);
         document.addEventListener('keydown', (event) => {
             if (event.key === 'Escape' && !overlay.hidden) closeModal();
@@ -304,8 +329,14 @@
 
     function openSettingsModal() {
         const modal = getSettingsModal();
-        const selected = modal.querySelector(`input[value="${downloadUiPreferences.mode}"]`);
-        if (selected) selected.checked = true;
+        const selectedUiMode = modal.querySelector(
+            `input[name="igd-download-ui-mode"][value="${downloadUiPreferences.mode}"]`,
+        );
+        if (selectedUiMode) selectedUiMode.checked = true;
+        const selectedVideoMode = modal.querySelector(
+            `input[name="igd-video-download-mode"][value="${videoDownloadPreferences.mode}"]`,
+        );
+        if (selectedVideoMode) selectedVideoMode.checked = true;
         const dateFormatSelect = modal.querySelector('.igd-date-format-select');
         if (dateFormatSelect) dateFormatSelect.value = downloadFilenamePreferences.dateFormat;
         Object.values(DOWNLOAD_FILENAME_SCOPES).forEach((scope) => renderFilenameRow(modal, scope));
