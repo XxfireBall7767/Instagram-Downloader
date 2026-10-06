@@ -1,7 +1,15 @@
 .PHONY: format format-check
 
+PNPX := $(shell command -v pnpx 2>/dev/null)
+
+ifeq ($(PNPX),)
+RUNNER := npx --yes
+else
+RUNNER := pnpx
+endif
+
 format:
-	npx --yes prettier --write ./src
+	$(RUNNER) prettier --write ./src
 
 format-check:
-	npx --yes prettier --check ./src
+	$(RUNNER) prettier --check ./src
