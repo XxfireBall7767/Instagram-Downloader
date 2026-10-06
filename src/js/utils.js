@@ -235,11 +235,33 @@ function getDownloadFilenameValues(data, item, useContainerId = false) {
     };
 }
 
-function getMediaFileName(data, item) {
+function resolveMediaFormatFromContentType(contentType) {
+    const mimeType = String(contentType || '')
+        .split(';')[0]
+        .trim()
+        .toLowerCase();
+    const formats = {
+        'image/jpeg': 'jpg',
+        'image/jpg': 'jpg',
+        'image/pjpeg': 'jpg',
+        'image/png': 'png',
+        'image/webp': 'webp',
+        'image/avif': 'avif',
+        'image/heic': 'heic',
+        'image/heif': 'heif',
+        'image/gif': 'gif',
+        'video/mp4': 'mp4',
+        'video/quicktime': 'mov',
+    };
+    return formats[mimeType] || null;
+}
+
+function getMediaFileName(data, item, blob) {
     const scope = getDownloadFilenameScope(data);
     const values = getDownloadFilenameValues(data, item);
     const baseName = downloadFilenamePreferences.formatMedia(scope, values);
-    return `${baseName}.${item.format}`;
+    const format = resolveMediaFormatFromContentType(blob?.type) || item.format;
+    return `${baseName}.${format}`;
 }
 
 function getArchiveFileName(data, item = data?.media?.[0]) {
@@ -274,7 +296,7 @@ async function downloadInlineMedia({ button, type, downloadAll = false, index = 
                 setInlineDownloadProgress(button, percent, operationKey),
             );
             setInlineDownloadProgress(button, 100, operationKey);
-            saveFile(blob, getMediaFileName(data, item));
+            saveFile(blob, getMediaFileName(data, item, blob));
             return;
         }
 
@@ -285,7 +307,7 @@ async function downloadInlineMedia({ button, type, downloadAll = false, index = 
             const blob = await fetchBestMediaBlob(item, ({ percent }) => {
                 setInlineDownloadProgress(button, ((processed + percent / 100) / data.media.length) * 95, operationKey);
             });
-            files.push({ title: getUniqueArchiveEntryName(getMediaFileName(data, item), usedNames), data: blob });
+            files.push({ title: getUniqueArchiveEntryName(getMediaFileName(data, item, blob), usedNames), data: blob });
             processed++;
             setInlineDownloadProgress(button, (processed / data.media.length) * 95, operationKey);
         }
@@ -301,14 +323,14 @@ async function downloadInlineMedia({ button, type, downloadAll = false, index = 
     }
 }
 
-async function saveMedia(item, fileName) {
+async function saveMedia(data, item) {
     const DOWNLOAD_BUTTON = document.querySelector('.download-button');
     try {
         setButtonProgress(DOWNLOAD_BUTTON, 0);
         const blob = await fetchBestMediaBlob(item, ({ percent }) => {
             setButtonProgress(DOWNLOAD_BUTTON, percent);
         });
-        saveFile(blob, fileName);
+        saveFile(blob, getMediaFileName(data, item, blob));
     } catch (error) {
         console.log(error);
     } finally {
@@ -328,7 +350,7 @@ async function saveAllSelected() {
             const blob = await fetchBestMediaBlob(item, ({ percent }) => {
                 setGroupDownloadProgress(ACTIVE_BUTTON, ((processed + percent / 100) / total) * 100);
             });
-            saveFile(blob, getMediaFileName(data, item));
+            saveFile(blob, getMediaFileName(data, item, blob));
         } catch (error) {
             console.log(error);
         } finally {
@@ -342,13 +364,7 @@ async function saveAllSelected() {
 async function saveZip() {
     const ACTIVE_BUTTON = document.querySelector('.zip-download-button');
     setGroupDownloadProgress(ACTIVE_BUTTON, 0);
-    const media = Array.from(appState.selected).map((index) => {
-        const item = appState.data.media[index];
-        return {
-            fileName: getMediaFileName(appState.data, item),
-            item,
-        };
-    });
+    const media = Array.from(appState.selected).map((index) => ({ item: appState.data.media[index] }));
     const zipFileName = getArchiveFileName(appState.data, media[0]?.item);
     async function fetchSelectedMedia() {
         let processed = 0;
@@ -360,7 +376,10 @@ async function saveZip() {
                 setGroupDownloadProgress(ACTIVE_BUTTON, downloadPercent);
             });
             results.push({
-                title: getUniqueArchiveEntryName(mediaItem.fileName, usedNames),
+                title: getUniqueArchiveEntryName(
+                    getMediaFileName(appState.data, mediaItem.item, blob),
+                    usedNames,
+                ),
                 data: blob,
             });
             processed++;
@@ -541,7 +560,7 @@ function renderMedia(data) {
                 appState.toggleSelected(index);
                 updateSelectedMedia();
             } else {
-                saveMedia(item, getMediaFileName(data, item));
+                saveMedia(data, item);
             }
         });
         fragment.appendChild(itemDOM);
