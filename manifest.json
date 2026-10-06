@@ -18,6 +18,7 @@
             "matches": ["https://www.instagram.com/*"],
             "js": [
                 "src/js/download-ui-preferences.js",
+                "src/js/video-download-preferences.js",
                 "src/js/filename-preferences.js",
                 "src/js/settings-ui.js"
             ],

@@ -130,6 +130,9 @@ async function fetchProgressiveMediaBlob(url, onProgress) {
 }
 
 async function fetchBestMediaBlob(item, onProgress) {
+    if (item.isVideo && videoDownloadPreferences.usesProgressive()) {
+        return fetchProgressiveMediaBlob(item.url, onProgress);
+    }
     if (item.isVideo && item.dash) return muxDashMedia(item.dash, onProgress);
     return fetchProgressiveMediaBlob(item.url, onProgress);
 }
@@ -207,10 +210,11 @@ function getDownloadFilenameScope(data) {
 
 function getDownloadFilenameValues(data, item, useContainerId = false) {
     const timestamp = item?.takenAt ?? data?.date;
-    const width = Number(item?.width || 0);
-    const height = Number(item?.height || 0);
-    const bitrate = Number(item?.videoBitrate || 0);
-    const codec = String(item?.videoCodec || '').toLowerCase();
+    const usesProgressive = item?.isVideo && videoDownloadPreferences.usesProgressive();
+    const width = Number((usesProgressive ? item?.progressiveWidth : item?.width) || 0);
+    const height = Number((usesProgressive ? item?.progressiveHeight : item?.height) || 0);
+    const bitrate = Number(usesProgressive ? 0 : item?.videoBitrate || 0);
+    const codec = String(usesProgressive ? 'h264' : item?.videoCodec || '').toLowerCase();
     let friendlyCodec = '';
     if (codec.startsWith('vp09') || codec.startsWith('vp9')) friendlyCodec = 'VP9';
     else if (codec.startsWith('av01') || codec.startsWith('av1')) friendlyCodec = 'AV1';
