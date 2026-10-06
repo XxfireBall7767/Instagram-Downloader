@@ -380,10 +380,7 @@ async function saveZip() {
                 setGroupDownloadProgress(ACTIVE_BUTTON, downloadPercent);
             });
             results.push({
-                title: getUniqueArchiveEntryName(
-                    getMediaFileName(appState.data, mediaItem.item, blob),
-                    usedNames,
-                ),
+                title: getUniqueArchiveEntryName(getMediaFileName(appState.data, mediaItem.item, blob), usedNames),
                 data: blob,
             });
             processed++;
