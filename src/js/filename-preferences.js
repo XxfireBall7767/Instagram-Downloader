@@ -75,8 +75,7 @@ const downloadFilenamePreferences = Object.freeze(
                 .replace(/[<>:"/\\|?*\u0000-\u001f]/g, '-')
                 .replace(/\s+/g, ' ')
                 .replace(/[. ]+$/g, '')
-                .trim()
-                .slice(0, 90);
+                .trim();
         }
 
         let templates = loadTemplates();
