@@ -39,9 +39,9 @@
         const handledRoots = new Set();
         for (const icon of document.querySelectorAll('svg[aria-label]')) {
             if (!isShareIcon(icon) || !isVisible(icon)) continue;
-            const shareButton = icon.closest('button, [role="button"]');
-            if (!shareButton) continue;
-            const root = getPostRoot(shareButton);
+            const anchorButton = icon.closest('button, [role="button"]');
+            if (!anchorButton) continue;
+            const root = getPostRoot(anchorButton);
             if (handledRoots.has(root) || (root === document && !IG_POST_REGEX.test(location.pathname))) continue;
             const reelsFeed = isReelsFeed();
             if (reelsFeed && !isActiveReel(root)) continue;
@@ -49,7 +49,7 @@
 
             // Stop at the innermost action group (a column on /reels/). The outer grid has
             // a separate Save cell: inserting a new child there creates a new row.
-            let container = shareButton.parentElement;
+            let container = anchorButton.parentElement;
             while (container && container !== root && container !== document.body) {
                 const style = getComputedStyle(container);
                 if (style.display === 'grid' || style.display === 'inline-grid') break;
@@ -63,10 +63,71 @@
                     icons.length <= 6
                 ) {
                     handledRoots.add(root);
-                    targets.push({ actionsContainer: container, shareButton });
+                    targets.push({ actionsContainer: container, anchorButton });
                     break;
                 }
                 container = container.parentElement;
+            }
+        }
+
+        // Some posts do not render a Share action at all. Fall back to the
+        // horizontal post action section and insert before its final action
+        // (normally Save). This structural fallback also works with translated
+        // accessibility labels.
+        if (!isReelsFeed()) {
+            for (const section of document.querySelectorAll('section')) {
+                if (!isVisible(section)) continue;
+                const sectionStyle = getComputedStyle(section);
+                const sectionIcons = [...section.querySelectorAll('svg[aria-label]')].filter(
+                    (icon) => isVisible(icon) && !icon.closest(OWN_BUTTONS),
+                );
+                if (sectionIcons.length < 3 || sectionIcons.length > 6) continue;
+
+                let actionsContainer = section;
+                let icons = sectionIcons;
+                let minimumActionItems = 3;
+                let useLastNativeItem = false;
+                if (['grid', 'inline-grid'].includes(sectionStyle.display)) {
+                    actionsContainer = [...section.children].find((child) => {
+                        const style = getComputedStyle(child);
+                        const childIcons = [...child.querySelectorAll('svg[aria-label]')].filter(
+                            (icon) => isVisible(icon) && !icon.closest(OWN_BUTTONS),
+                        );
+                        return (
+                            isVisible(child) &&
+                            ['flex', 'inline-flex'].includes(style.display) &&
+                            ['row', 'row-reverse'].includes(style.flexDirection) &&
+                            childIcons.length >= 2
+                        );
+                    });
+                    if (!actionsContainer) continue;
+                    icons = [...actionsContainer.querySelectorAll('svg[aria-label]')].filter(
+                        (icon) => isVisible(icon) && !icon.closest(OWN_BUTTONS),
+                    );
+                    minimumActionItems = 2;
+                    useLastNativeItem = true;
+                } else if (
+                    !['flex', 'inline-flex'].includes(sectionStyle.display) ||
+                    !['row', 'row-reverse'].includes(sectionStyle.flexDirection)
+                ) {
+                    continue;
+                }
+
+                const actionItems = icons
+                    .map((icon) => icon.closest('button, [role="button"]'))
+                    .map((button) => findDirectChild(actionsContainer, button))
+                    .filter((item, index, items) => item && items.indexOf(item) === index);
+                if (actionItems.length < minimumActionItems) continue;
+
+                const anchorItem = useLastNativeItem
+                    ? [...actionsContainer.children].filter((item) => !item.matches(OWN_BUTTONS)).at(-1)
+                    : actionItems[actionItems.length - 2];
+                if (!anchorItem) continue;
+                const root = getPostRoot(anchorItem);
+                if (handledRoots.has(root) || (root === document && !IG_POST_REGEX.test(location.pathname))) continue;
+
+                handledRoots.add(root);
+                targets.push({ actionsContainer, anchorButton: anchorItem });
             }
         }
         return targets;
@@ -78,12 +139,12 @@
         return child?.parentElement === container ? child : null;
     }
 
-    function getPostRoot(shareButton) {
-        const article = shareButton.closest('article');
+    function getPostRoot(actionButton) {
+        const article = actionButton.closest('article');
         if (article || !isReelsFeed()) return article ?? document;
         // A reel's own container is the largest ancestor holding only its Share
         // button. Its video can be missing while it loads lazily off screen.
-        let reel = shareButton;
+        let reel = actionButton;
         while (
             reel.parentElement &&
             reel.parentElement !== document.body &&
@@ -233,14 +294,14 @@
         }
 
         const handledContainers = new Set();
-        for (const { actionsContainer, shareButton } of findPostActionTargets()) {
+        for (const { actionsContainer, anchorButton } of findPostActionTargets()) {
             if (!actionsContainer || handledContainers.has(actionsContainer)) continue;
             handledContainers.add(actionsContainer);
 
-            const shareItem = findDirectChild(actionsContainer, shareButton);
-            const root = getPostRoot(shareButton);
+            const anchorItem = findDirectChild(actionsContainer, anchorButton);
+            const root = getPostRoot(anchorButton);
             const shortcode = getPostShortcode(root);
-            if (!shareItem || !shortcode) continue;
+            if (!anchorItem || !shortcode) continue;
 
             let singleButton = findOwnButton(actionsContainer, BUTTON_CLASS);
             if (!singleButton || singleButton.dataset.postShortcode !== shortcode) {
@@ -257,16 +318,16 @@
                     downloadAllButton = createPostDownloadButton({ downloadAll: true, root, shortcode });
                 }
                 activeButtons.add(downloadAllButton);
-                if (shareItem.nextElementSibling !== downloadAllButton) {
-                    shareItem.insertAdjacentElement('afterend', downloadAllButton);
+                if (anchorItem.nextElementSibling !== downloadAllButton) {
+                    anchorItem.insertAdjacentElement('afterend', downloadAllButton);
                 }
                 if (downloadAllButton.nextElementSibling !== singleButton) {
                     downloadAllButton.insertAdjacentElement('afterend', singleButton);
                 }
             } else {
                 downloadAllButton?.remove();
-                if (shareItem.nextElementSibling !== singleButton) {
-                    shareItem.insertAdjacentElement('afterend', singleButton);
+                if (anchorItem.nextElementSibling !== singleButton) {
+                    anchorItem.insertAdjacentElement('afterend', singleButton);
                 }
             }
         }
