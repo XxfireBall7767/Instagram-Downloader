@@ -287,7 +287,115 @@ function getUniqueArchiveEntryName(fileName, usedNames) {
     return candidate;
 }
 
-async function downloadInlineMedia({ button, type, downloadAll = false, index = 0, shortcode, operationKey = '' }) {
+function getMediaId(value) {
+    return String(value ?? '').match(/^\d+/)?.[0] ?? '';
+}
+
+function getMediaCacheId(mediaUrl) {
+    if (!mediaUrl || mediaUrl.startsWith('blob:')) return '';
+    try {
+        let cacheKey = new URL(mediaUrl).searchParams.get('ig_cache_key') || '';
+        for (let attempt = 0; attempt < 2; attempt++) {
+            try {
+                cacheKey = decodeURIComponent(cacheKey);
+            } catch {
+                break;
+            }
+        }
+        return atob(cacheKey).match(/\d{10,}/)?.[0] ?? '';
+    } catch {
+        return '';
+    }
+}
+
+function getMediaUrlPath(mediaUrl) {
+    if (!mediaUrl || mediaUrl.startsWith('blob:')) return '';
+    try {
+        return new URL(mediaUrl).pathname;
+    } catch {
+        return '';
+    }
+}
+
+function resolveSelectedStoryMedia(data, selection) {
+    if (!selection?.stable) return null;
+
+    const selectedMediaId = getMediaId(selection.mediaId);
+    if (selectedMediaId) {
+        const mediaById = data.media.find((item) => getMediaId(item.id) === selectedMediaId);
+        if (mediaById) return mediaById;
+    }
+
+    const selectedCacheId = getMediaCacheId(selection.sourceUrl);
+    if (selectedCacheId) {
+        const mediaByCacheId = data.media.find(
+            (item) => getMediaId(item.id) === selectedCacheId || getMediaCacheId(item.url) === selectedCacheId,
+        );
+        if (mediaByCacheId) return mediaByCacheId;
+    }
+
+    const selectedPath = getMediaUrlPath(selection.sourceUrl);
+    if (selectedPath) {
+        const mediaByUrl = data.media.find((item) => getMediaUrlPath(item.url) === selectedPath);
+        if (mediaByUrl) return mediaByUrl;
+    }
+
+    const index = Number(selection.index);
+    const itemCount = Number(selection.itemCount);
+    if (
+        selection.indexConfident &&
+        Number.isInteger(index) &&
+        index >= 0 &&
+        index < data.media.length &&
+        itemCount === data.media.length
+    ) {
+        return data.media[index];
+    }
+
+    return null;
+}
+
+function resolveSelectedPostMedia(data, selection, shortcode) {
+    if (!selection?.stable || selection.shortcode !== shortcode) return null;
+
+    const selectedCacheId = getMediaCacheId(selection.sourceUrl);
+    if (selectedCacheId) {
+        const mediaByCacheId = data.media.find(
+            (item) => getMediaId(item.id) === selectedCacheId || getMediaCacheId(item.url) === selectedCacheId,
+        );
+        if (mediaByCacheId) return mediaByCacheId;
+    }
+
+    const selectedPath = getMediaUrlPath(selection.sourceUrl);
+    if (selectedPath) {
+        const mediaByUrl = data.media.find((item) => getMediaUrlPath(item.url) === selectedPath);
+        if (mediaByUrl) return mediaByUrl;
+    }
+
+    const index = Number(selection.index);
+    const itemCount = Number(selection.itemCount);
+    if (
+        selection.indexConfident &&
+        Number.isInteger(index) &&
+        index >= 0 &&
+        index < data.media.length &&
+        itemCount === data.media.length
+    ) {
+        return data.media[index];
+    }
+
+    return null;
+}
+
+async function downloadInlineMedia({
+    button,
+    type,
+    downloadAll = false,
+    index = 0,
+    selection = null,
+    shortcode,
+    operationKey = '',
+}) {
     if (button.disabled) return;
     setInlineDownloadProgress(button, 0, operationKey);
     try {
@@ -295,7 +403,11 @@ async function downloadInlineMedia({ button, type, downloadAll = false, index = 
         if (!data?.media?.length) throw new Error('No downloadable media found');
 
         if (!downloadAll) {
-            const item = data.media[Math.min(Math.max(index, 0), data.media.length - 1)];
+            let item = null;
+            if (type === 'stories' || type === 'highlights') item = resolveSelectedStoryMedia(data, selection);
+            else if (type === 'post') item = resolveSelectedPostMedia(data, selection, shortcode);
+            else item = data.media[Math.min(Math.max(index, 0), data.media.length - 1)];
+            if (!item) throw new Error('Unable to identify the currently displayed media safely');
             const blob = await fetchBestMediaBlob(item, ({ percent }) =>
                 setInlineDownloadProgress(button, percent, operationKey),
             );

@@ -240,14 +240,60 @@
         return [];
     }
 
-    function getCurrentPostMediaIndex(root) {
+    function getCurrentPostMediaState(root) {
         const activeSlide = root.querySelector('button[aria-current="step"]');
         const slideButtons = getSlideButtons(activeSlide);
         const activeIndex = slideButtons.indexOf(activeSlide);
-        if (activeIndex >= 0) return activeIndex;
+        if (activeIndex >= 0) {
+            return { index: activeIndex, itemCount: slideButtons.length, indexConfident: true };
+        }
 
-        const urlIndex = Number(new URL(window.location.href).searchParams.get('img_index'));
-        return Number.isInteger(urlIndex) && urlIndex > 0 ? urlIndex - 1 : 0;
+        if (!isCarouselPost(root)) return { index: 0, itemCount: 1, indexConfident: true };
+        return { index: -1, itemCount: 0, indexConfident: false };
+    }
+
+    function getVisiblePostMediaSource(root) {
+        const candidates = [...root.querySelectorAll('img, video')]
+            .map((media) => {
+                const rect = media.getBoundingClientRect();
+                const visibleWidth = Math.max(0, Math.min(rect.right, innerWidth) - Math.max(rect.left, 0));
+                const visibleHeight = Math.max(0, Math.min(rect.bottom, innerHeight) - Math.max(rect.top, 0));
+                return { media, rect, visibleArea: visibleWidth * visibleHeight };
+            })
+            .filter(({ rect, visibleArea }) => rect.width >= 200 && rect.height >= 200 && visibleArea > 0)
+            .sort((first, second) => second.visibleArea - first.visibleArea);
+        const currentMedia = candidates[0]?.media;
+        return currentMedia?.currentSrc || currentMedia?.src || '';
+    }
+
+    function readPostSelection(root) {
+        const mediaState = getCurrentPostMediaState(root);
+        return {
+            shortcode: getPostShortcode(root),
+            sourceUrl: getVisiblePostMediaSource(root),
+            ...mediaState,
+        };
+    }
+
+    function postSelectionsMatch(first, second) {
+        return (
+            first.shortcode === second.shortcode &&
+            first.sourceUrl === second.sourceUrl &&
+            first.index === second.index &&
+            first.itemCount === second.itemCount
+        );
+    }
+
+    async function getStablePostSelection(root) {
+        const first = readPostSelection(root);
+        await new Promise((resolve) => requestAnimationFrame(resolve));
+        await new Promise((resolve) => requestAnimationFrame(resolve));
+        const second = readPostSelection(root);
+        return {
+            ...second,
+            stable: postSelectionsMatch(first, second),
+            indexConfident: first.indexConfident && second.indexConfident,
+        };
     }
 
     function createPostDownloadButton({ downloadAll, root, shortcode }) {
@@ -267,14 +313,16 @@
             : `<svg aria-hidden="true" viewBox="0 0 24 24" width="24" height="24">
                     <path d="M12 3v11m0 0 4-4m-4 4-4-4M5 19h14" />
                </svg>`;
-        button.addEventListener('click', (event) => {
+        button.addEventListener('click', async (event) => {
             event.preventDefault();
             event.stopPropagation();
+            const selection = downloadAll ? null : await getStablePostSelection(root);
             downloadInlineMedia({
                 button,
                 type: 'post',
                 downloadAll,
-                index: downloadAll ? 0 : getCurrentPostMediaIndex(root),
+                index: selection?.index ?? 0,
+                selection,
                 shortcode,
             });
         });
