@@ -67,15 +67,79 @@
         return { playbackButton: null, playbackWrapper: null, toolbar: null };
     }
 
-    function getCurrentStoryIndex(toolbar) {
+    function getCurrentStoryProgress(toolbar) {
         const segments = [...(toolbar.previousElementSibling?.children ?? [])];
-        const activeIndex = segments.findIndex((segment) => segment.childElementCount > 0);
-        if (activeIndex >= 0) return activeIndex;
+        const activeIndexes = segments.reduce((indexes, segment, index) => {
+            if (segment.childElementCount > 0) indexes.push(index);
+            return indexes;
+        }, []);
+        if (activeIndexes.length === 1) {
+            return { index: activeIndexes[0], count: segments.length, confident: true };
+        }
 
         const firstPendingIndex = segments.findIndex(
             (segment) => getComputedStyle(segment).backgroundColor !== 'rgb(255, 255, 255)',
         );
-        return firstPendingIndex >= 0 ? firstPendingIndex : Math.max(segments.length - 1, 0);
+        return {
+            index: firstPendingIndex >= 0 ? firstPendingIndex : Math.max(segments.length - 1, 0),
+            count: segments.length,
+            confident: firstPendingIndex >= 0 && segments.length > 0,
+        };
+    }
+
+    function getStoryMediaIdFromPath(type) {
+        if (type !== 'stories') return '';
+        const pathParts = window.location.pathname.split('/').filter(Boolean);
+        return /^\d+$/.test(pathParts[2] ?? '') ? pathParts[2] : '';
+    }
+
+    function getVisibleStoryMediaSource() {
+        const candidates = [...document.querySelectorAll('img, video')]
+            .map((media) => ({ media, rect: media.getBoundingClientRect() }))
+            .filter(
+                ({ rect }) =>
+                    rect.width >= 240 &&
+                    rect.height >= 300 &&
+                    rect.bottom > 0 &&
+                    rect.right > 0 &&
+                    rect.top < window.innerHeight &&
+                    rect.left < window.innerWidth,
+            )
+            .sort((first, second) => second.rect.width * second.rect.height - first.rect.width * first.rect.height);
+        const currentMedia = candidates[0]?.media;
+        return currentMedia?.currentSrc || currentMedia?.src || '';
+    }
+
+    function readStorySelection(toolbar, type) {
+        const progress = getCurrentStoryProgress(toolbar);
+        return {
+            mediaId: getStoryMediaIdFromPath(type),
+            sourceUrl: getVisibleStoryMediaSource(),
+            index: progress.index,
+            itemCount: progress.count,
+            indexConfident: progress.confident,
+        };
+    }
+
+    function selectionsMatch(first, second) {
+        return (
+            first.mediaId === second.mediaId &&
+            first.sourceUrl === second.sourceUrl &&
+            first.index === second.index &&
+            first.itemCount === second.itemCount
+        );
+    }
+
+    async function getStableStorySelection(toolbar, type) {
+        const first = readStorySelection(toolbar, type);
+        await new Promise((resolve) => requestAnimationFrame(resolve));
+        await new Promise((resolve) => requestAnimationFrame(resolve));
+        const second = readStorySelection(toolbar, type);
+        return {
+            ...second,
+            stable: selectionsMatch(first, second),
+            indexConfident: first.indexConfident && second.indexConfident,
+        };
     }
 
     function getStoryDownloadOperationKey(downloadAll) {
@@ -95,14 +159,14 @@
         button.innerHTML = icon;
         button.dataset.downloadOperationKey = getStoryDownloadOperationKey(downloadAll);
         restoreInlineDownloadProgress(button);
-        button.addEventListener('click', (event) => {
+        button.addEventListener('click', async (event) => {
             event.preventDefault();
             event.stopPropagation();
             const type = window.location.pathname.startsWith('/stories/highlights/') ? 'highlights' : 'stories';
-            const index = downloadAll ? 0 : getCurrentStoryIndex(button.parentElement);
             const operationKey = getStoryDownloadOperationKey(downloadAll);
             button.dataset.downloadOperationKey = operationKey;
-            downloadInlineMedia({ button, type, downloadAll, index, operationKey });
+            const selection = downloadAll ? null : await getStableStorySelection(button.parentElement, type);
+            downloadInlineMedia({ button, type, downloadAll, index: selection?.index ?? 0, selection, operationKey });
         });
         return button;
     }
