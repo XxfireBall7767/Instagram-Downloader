@@ -375,12 +375,13 @@ function resolveSelectedPostMedia(data, selection, shortcode) {
 
     const index = Number(selection.index);
     const itemCount = Number(selection.itemCount);
+    const indexMatchesMedia = selection.indexSource === 'track' || itemCount === data.media.length;
     const mediaByIndex =
         selection.indexConfident &&
         Number.isInteger(index) &&
         index >= 0 &&
         index < data.media.length &&
-        itemCount === data.media.length
+        indexMatchesMedia
             ? data.media[index]
             : null;
 
