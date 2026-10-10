@@ -286,6 +286,10 @@
 
     async function getStablePostSelection(root) {
         const first = readPostSelection(root);
+        /**
+         * During navigation, Instagram can update the URL, carousel/progress indicators, and visible media across separate render frames.
+         * Waiting for one animation frame and verifying the selection again prevents us from downloading the previous item while the UI is still transitioning.
+         */
         await new Promise((resolve) => requestAnimationFrame(resolve));
         await new Promise((resolve) => requestAnimationFrame(resolve));
         const second = readPostSelection(root);
